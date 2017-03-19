@@ -24,6 +24,10 @@ import org.springframework.orm.jpa.vendor.Database;
 import org.springframework.orm.jpa.vendor.HibernateJpaDialect;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 
+/**
+ * @author Balamurugan Tamilmani
+ *
+ */
 @SpringBootApplication
 public class FileUploadApplication extends SpringBootServletInitializer {
 
@@ -51,7 +55,6 @@ public class FileUploadApplication extends SpringBootServletInitializer {
 	    lcemfb.setJpaVendorAdapter(jpaVendorAdapter());
 	    lcemfb.setPersistenceUnitName("persistenceUnit");
 	    lcemfb.setPackagesToScan("com.balatamilmani.model");
-	    //lcemfb.setPersistenceXmlLocation("classpath:META-INF/persistence.xml");
 	    lcemfb.afterPropertiesSet();
 	    return lcemfb.getObject();
 	  }

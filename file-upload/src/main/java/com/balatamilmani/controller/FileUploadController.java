@@ -18,41 +18,33 @@ import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.balatamilmani.dto.FileHolder;
-import com.balatamilmani.exception.FileServiceFileNotFoundException;
+import com.balatamilmani.exception.FileServiceException;
 import com.balatamilmani.model.FileEntity;
 import com.balatamilmani.service.FileUploadService;
 
-@Controller
+@RestController
+@RequestMapping("/file")
 public class FileUploadController {
 
 	@Autowired
 	FileUploadService fileUploadService;
-
-    
-    @RequestMapping(value="/greet", produces=MediaType.ALL_VALUE)
-    @ResponseBody
-    public String greet(){
-    	System.out.println(fileUploadService);
-    	return "Hello ...";
-    }
     
 	/**
 	 * @param file The multipart file
 	 * @return The unique file ID which can be used to retrieve file or its metadata
 	 */
-	@RequestMapping(value="/file", method = RequestMethod.POST)
-	@ResponseBody
-	public String handleFileUpload(@RequestParam("file") MultipartFile file) {
+	@RequestMapping(method = RequestMethod.POST)
+	public String handleFileUpload(@RequestParam("file") MultipartFile file) throws FileServiceException{
 
 		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 		byte bytes[] = null;
@@ -62,20 +54,18 @@ public class FileUploadController {
 				IOUtils.copy(file.getInputStream(), buffer);
 				bytes = buffer.toByteArray();
 				fileUniqId = fileUploadService.saveFile(file.getOriginalFilename(), bytes);
-			} catch (Exception e) {
-				// need to be handled
+			} catch (IOException e) {
+				throw new FileServiceException("Couldn't save the File", e);
 			}
 		} else {
-			fileUniqId = "file upload failed";
+			throw new FileServiceException("File is empty or no File chosen");
 		}
-
 		return fileUniqId;
 	}
 
-	@RequestMapping("/file/{fileId}/metadata")
-	@ResponseBody
-	public FileEntity getFileMetaData(@PathVariable String fileId) throws Exception {
-		FileEntity fe = fileUploadService.getMetaData(fileId);
+	@RequestMapping("/{fileId}/metadata")
+	public FileEntity getFileMetaData(@PathVariable String fileId) throws FileServiceException {
+		FileEntity fe = fileUploadService.getFileEntity(fileId);
 		return fe;
 	}
 
@@ -84,8 +74,8 @@ public class FileUploadController {
 	 * @param response
 	 * @throws Exception
 	 */
-	@RequestMapping(method = RequestMethod.GET, value = "/file/{fileId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-	public void downloadFile(@PathVariable String fileId, HttpServletResponse response) throws Exception {
+	@RequestMapping(method = RequestMethod.GET, value = "/{fileId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+	public void downloadFile(@PathVariable String fileId, HttpServletResponse response) throws FileServiceException {
 
 		FileHolder fh = null;
 		InputStream inputStream = null;
@@ -97,33 +87,36 @@ public class FileUploadController {
 			outputStream = response.getOutputStream();
 			response.reset();
 			response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
-			response.setContentType("application/txt");
 			response.setHeader("Content-Disposition", "attachment;filename=\"" + fh.getFileName() + "\"");
 			IOUtils.copyLarge(inputStream, outputStream);
 			outputStream.flush();
-		} catch (IOException | RuntimeException e) {
-			System.out.println(e.getMessage());
-			throw new Exception();
+		} catch (IOException e) {
+			throw new FileServiceException("Couldn't retrieve the File", e);
 		} finally {
 			if (inputStream != null) {
 				try {
 					inputStream.close();
 				} catch (IOException e) {
-					System.out.println(e.getMessage());
+					//Ignore
 				}
 			}
 			if (outputStream != null) {
 				try {
 					outputStream.close();
 				} catch (IOException e) {
-					System.out.println(e.getMessage());
+					//Ignore
 				}
 			}
 		}
 	}
 	
-    @ExceptionHandler(FileServiceFileNotFoundException.class)
-    public ResponseEntity<?> handleStorageFileNotFound(FileServiceFileNotFoundException exc) {
+    @ExceptionHandler(FileServiceException.class)
+    public String handleStorageFileNotFound(FileServiceException exc) {
+    	return exc.getMessage();
+    }
+    
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleStorageFileNotFound(Exception exc) {
         return ResponseEntity.notFound().build();
     }
 }

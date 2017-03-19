@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.balatamilmani.dao.FileDaoImpl;
 import com.balatamilmani.dto.FileHolder;
+import com.balatamilmani.exception.FileServiceException;
 import com.balatamilmani.model.FileEntity;
 
 /**
@@ -37,32 +38,36 @@ public class FileUploadServiceImpl implements FileUploadService{
 	private FileDaoImpl fileDao;
 	
 	@Override
-	public String saveFile(String fileName, byte[] bytes) throws Exception{
+	public String saveFile(String fileName, byte[] bytes) throws FileServiceException{
 		FileEntity fe = null;
 		long fileSize = bytes.length;
+		String dirPath = null;
+		String absoluteFilePath = null;
 		
+		//Create a Unique ID for File
 		String fileId = UUID.randomUUID().toString();
-		String absoluteFilePath = System.getProperty("java.io.tmpdir")+FileSystems.getDefault().getSeparator()+fileId+"_"+fileName;
+		
+		dirPath = System.getProperty("java.io.tmpdir");
+		absoluteFilePath = dirPath+FileSystems.getDefault().getSeparator()+fileId+"_"+fileName;
+		
 		//save the file meta data
 		fe = new FileEntity();
 		fe.setFileId(fileId);
 		fe.setFileName(fileName);
 		fe.setFileSize(fileSize);
 		fileDao.persist(fe);
-		System.out.println("file saved in db");
+		
 		//Write the file
 		try {
 			Files.write(Paths.get(absoluteFilePath), bytes);
-			
 		} catch (IOException e) {
-			throw e;
-			//suppose to convert into Application Exception and throw
+			throw new FileServiceException("Couldn't save the File", e);
 		}		
 		return fileId;
 	}
 
 	@Override
-	public FileHolder downloadFile(String fileId) throws Exception{
+	public FileHolder downloadFile(String fileId) throws FileServiceException{
 		FileEntity fe = null;
 		FileHolder fh = null;
 		InputStream inputStream = null;
@@ -70,7 +75,8 @@ public class FileUploadServiceImpl implements FileUploadService{
 		byte bytes[] = null;
 		
 		fh = new FileHolder();
-		fe = fileDao.find(fileId);
+		fe = getFileEntity(fileId);
+
 		Path path = Paths.get(System.getProperty("java.io.tmpdir")+FileSystems.getDefault().getSeparator()+fileId+"_"+fe.getFileName());
 		fh.setFileName(fe.getFileName());
 			try {
@@ -80,21 +86,20 @@ public class FileUploadServiceImpl implements FileUploadService{
 				fh.setContent(bytes);
 				
 			} catch (IOException|RuntimeException e) {
-				System.out.println(e.getMessage());
-				throw new Exception();
+				throw new FileServiceException("Couldn't retrieve the File", e);
 			} finally {
 				if(inputStream != null){
 					try {
 						inputStream.close();
 					} catch (IOException e) {
-						System.out.println(e.getMessage());
+						//Ignore
 					}
 				}
 				if(buffer != null){
 					try {
 						buffer.close();
 					} catch (IOException e) {
-						System.out.println(e.getMessage());
+						//Ignore
 					}
 				}
 			}
@@ -102,7 +107,11 @@ public class FileUploadServiceImpl implements FileUploadService{
 	}
 
 	@Override
-	public FileEntity getMetaData(String fileId) throws Exception {
-		return fileDao.find(fileId);
+	public FileEntity getFileEntity(String fileId) throws FileServiceException {
+		FileEntity fe = fileDao.find(fileId);
+		if(fe == null){
+			throw new FileServiceException("Invalid FileID, no File found with the given ID");
+		}
+		return fe;
 	}
 }

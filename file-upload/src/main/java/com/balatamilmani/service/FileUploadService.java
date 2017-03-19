@@ -7,6 +7,7 @@
 package com.balatamilmani.service;
 
 import com.balatamilmani.dto.FileHolder;
+import com.balatamilmani.exception.FileServiceException;
 import com.balatamilmani.model.FileEntity;
 
 /**
@@ -15,9 +16,9 @@ import com.balatamilmani.model.FileEntity;
  */
 
 public interface FileUploadService {
-	public String saveFile(String fileName, byte bytes[]) throws Exception;
+	public String saveFile(String fileName, byte bytes[]) throws FileServiceException;
 	
-	public FileHolder downloadFile(String fileId) throws Exception;
+	public FileHolder downloadFile(String fileId) throws FileServiceException;
 	
-	public FileEntity getMetaData(String fileId) throws Exception;
+	public FileEntity getFileEntity(String fileId) throws FileServiceException;
 }
