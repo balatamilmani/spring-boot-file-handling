@@ -1,5 +1,6 @@
 package com.balatamilmani;
 
+import static org.junit.Assert.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.fileUpload;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -38,6 +39,7 @@ public class FileUploadServiceTest {
         MvcResult result = this.mvc.perform(fileUpload("/file").file(multipartFile))
                .andExpect(status().is(200)).andReturn();
         String fileId = result.getResponse().getContentAsString();
+        assertNotNull(fileId);
     }
 
 }
