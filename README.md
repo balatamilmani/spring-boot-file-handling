@@ -5,7 +5,7 @@ Files should be posted to this URL
 http://localhost:8080/file
 
 File can be downloaded using the URL with a GET Request
-http://localhost:8080/file/<fileId>
+http://localhost:8080/file/<fileId\>
 
 File's Metadata can be retrieved using the following URL
-http://localhost:8080/file/<fileId>\/metadata
+http://localhost:8080/file/<fileId\>/metadata
